@@ -64,7 +64,7 @@
   }
   function renderGen(d, g) {
     var chip = g.status === "done" ? "✅ Done" : g.status === "error" ? "⚠️ Failed" : "⏳ " + (g.status === "running" ? "Rendering…" : "Queued…");
-    var engineName = { comfy: "ComfyUI", wan: "Wan", seedance: "Seedance", avatar: "Avatar" }[g.model] || g.model;
+    var engineName = { comfy: "ComfyUI", "comfy-ltx": "LTX-2.5", wan: "Wan", seedance: "Seedance", avatar: "Avatar" }[g.model] || g.model;
     var html = '<p style="margin:0 0 6px;"><b>' + esc(engineName) + "</b> · " + chip + "</p>";
     if (g.prompt) html += '<p class="muted" style="margin:0 0 8px;">' + esc(g.prompt) + "</p>";
     if (g.status === "done" && g.video_url) {
