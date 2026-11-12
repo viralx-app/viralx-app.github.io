@@ -26,6 +26,9 @@ Protocol (one connection):
            PING                          -> PONG       (no MIDI sent)
            SCAN                          -> SCAN_DONE files=<n> bytes=<total> inventory=inventory.json
            GET <path>                    -> FILE <size> + raw bytes + OK GET
+           CLOSE_FL                      -> OK CLOSE_FL (graceful close; ERR FL_STILL_OPEN if FL waits on its save prompt)
+           OPEN_FL                       -> OK OPEN_FL   (launches FL64.exe)
+           RESTART_FL                    -> OK RESTART_FL (close, wait for exit, reopen)
        Errors reply:  ERR <reason>
 
 GET paths are relative to a library root, e.g. "GET Kicks/kick.wav"
@@ -44,11 +47,13 @@ Stop it: Ctrl+C
 """
 
 import datetime
+import glob
 import ipaddress
 import json
 import os
 import socket
 import socketserver
+import subprocess
 import sys
 import time
 
@@ -311,6 +316,73 @@ def send_note(note):
 
 
 # ------------------------------------------------------------------
+# FL Studio process control (CLOSE_FL / OPEN_FL / RESTART_FL)
+# ------------------------------------------------------------------
+
+FL_PROCESS = "FL64.exe"
+FL_EXE_GLOBS = (
+    "C:\\Program Files\\Image-Line\\FL Studio*\\FL64.exe",
+    "C:\\Program Files (x86)\\Image-Line\\FL Studio*\\FL64.exe",
+)
+
+
+def fl_running():
+    """True if FL Studio's process exists."""
+    try:
+        out = subprocess.run(
+            ["tasklist", "/FI", "IMAGENAME eq %s" % FL_PROCESS, "/NH"],
+            capture_output=True, text=True, timeout=15,
+        ).stdout
+    except Exception:
+        return False
+    return FL_PROCESS.lower() in (out or "").lower()
+
+
+def fl_exe_path():
+    """Find FL64.exe under Program Files\\Image-Line (last folder wins)."""
+    found = []
+    for pattern in FL_EXE_GLOBS:
+        found.extend(glob.glob(pattern))
+    if not found:
+        return None
+    return sorted(found)[-1]
+
+
+def close_fl():
+    """Ask FL to close gracefully (same as clicking the X).
+
+    taskkill without /F sends WM_CLOSE, so FL shows its normal
+    save-project prompt if the project has unsaved changes. Returns
+    True once FL's process is gone (waits up to ~25 s).
+    """
+    if not fl_running():
+        return True
+    try:
+        subprocess.run(["taskkill", "/IM", FL_PROCESS],
+                       capture_output=True, timeout=15)
+    except Exception:
+        return False
+    for _ in range(50):
+        if not fl_running():
+            return True
+        time.sleep(0.5)
+    return False
+
+
+def open_fl():
+    """Launch FL Studio. Returns (ok, detail)."""
+    exe = fl_exe_path()
+    if exe is None:
+        return False, "NO_FL_FOUND"
+    try:
+        subprocess.Popen([exe], cwd=os.path.dirname(exe),
+                         creationflags=0x00000008 | 0x00000200)
+    except Exception as exc:
+        return False, "LAUNCH_FAILED %s" % exc
+    return True, exe
+
+
+# ------------------------------------------------------------------
 # TCP command server
 # ------------------------------------------------------------------
 
@@ -360,6 +432,31 @@ class BridgeHandler(socketserver.StreamRequestHandler):
                     self._reply("OK " + verb)
                 else:
                     self._reply("ERR NO_MIDI_PORT")
+            elif verb == "CLOSE_FL":
+                if close_fl():
+                    log("CLOSE_FL -> FL closed")
+                    self._reply("OK CLOSE_FL")
+                else:
+                    log("CLOSE_FL -> FL still open (save prompt?)")
+                    self._reply("ERR FL_STILL_OPEN")
+            elif verb == "OPEN_FL":
+                ok, detail = open_fl()
+                if ok:
+                    log("OPEN_FL -> %s" % detail)
+                    self._reply("OK OPEN_FL")
+                else:
+                    self._reply("ERR " + detail)
+            elif verb == "RESTART_FL":
+                if not close_fl():
+                    log("RESTART_FL -> FL still open (save prompt?)")
+                    self._reply("ERR FL_STILL_OPEN")
+                else:
+                    ok, detail = open_fl()
+                    if ok:
+                        log("RESTART_FL -> reopened %s" % detail)
+                        self._reply("OK RESTART_FL")
+                    else:
+                        self._reply("ERR " + detail)
             elif verb == "SCAN":
                 self._do_scan()
             elif verb == "GET":
@@ -419,7 +516,7 @@ def main():
     host, why = choose_bind_host()
     server = BridgeServer((host, TCP_PORT), BridgeHandler)
     log("Muse Bridge listening on %s:%d (%s)" % (host, TCP_PORT, why))
-    log("Token check is ON. Commands: PLAY PAUSE STOP RECORD PING SCAN GET")
+    log("Token check is ON. Commands: PLAY PAUSE STOP RECORD PING SCAN GET CLOSE_FL OPEN_FL RESTART_FL")
     # Warm up the MIDI port now so a missing loopMIDI port is
     # reported at startup, not on the first command.
     open_midi_port()
