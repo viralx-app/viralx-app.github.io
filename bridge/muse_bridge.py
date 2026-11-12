@@ -303,7 +303,10 @@ def send_note(note):
 
     out.send(mido.Message("note_on", note=note, velocity=127))
     time.sleep(0.05)
-    out.send(mido.Message("note_off", note=note, velocity=0))
+    # Mackie-standard release: note_on with velocity 0 (real MCU hardware
+    # never sends 0x80 note_off; FL's Mackie script can read a note_off
+    # as a second button press and stop the transport).
+    out.send(mido.Message("note_on", note=note, velocity=0))
     return True
 
 
