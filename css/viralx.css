@@ -192,14 +192,12 @@ body::before{
 *::-webkit-scrollbar-thumb:hover{background:var(--vx-green-dim)}
 *::-webkit-scrollbar-track{background:transparent}
 
-/* Chrome headings with a moving shine */
+/* Chrome headings */
 h1.chrome{
   background:linear-gradient(100deg,#ffffff 0%,#cfd4d1 30%,#7e8781 46%,#ffffff 52%,#e8ece9 62%,#9aa39d 100%);
   background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
-  animation:vxshine 5.5s ease-in-out infinite;
   filter:drop-shadow(0 2px 14px rgba(139,255,0,.18));
 }
-@keyframes vxshine{0%,100%{background-position:0% 0}50%{background-position:100% 0}}
 .vx-logo{filter:drop-shadow(0 0 12px rgba(139,255,0,.25))}
 
 /* Glass-pro cards with gradient edge + glow */
@@ -216,7 +214,7 @@ h1.chrome{
 }
 .card h2,.card h3{letter-spacing:.01em}
 
-/* Buttons: gradient, shine sweep, press physics */
+/* Buttons: gradient, press physics */
 .btn{
   position:relative;overflow:hidden;
   background:linear-gradient(180deg,#1a1f1c,#12150f);
@@ -225,13 +223,7 @@ h1.chrome{
   transition:transform .12s ease, box-shadow .2s ease, border-color .2s ease;
 }
 .btn:active{transform:scale(.965)}
-.btn::after{
-  content:"";position:absolute;top:0;left:-70%;width:45%;height:100%;
-  background:linear-gradient(100deg,transparent,rgba(255,255,255,.22),transparent);
-  transform:skewX(-18deg);transition:left .5s ease;pointer-events:none;
-}
-.btn:hover::after,.btn:active::after{left:130%}
-.btn-green{
+
   background:linear-gradient(180deg,#a5ff3d,#8BFF00 55%,#6fd400);
   border-color:#baff70;color:#06130a;
   box-shadow:0 0 22px rgba(139,255,0,.45), 0 8px 22px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.5);
@@ -291,24 +283,8 @@ input,textarea,select{transition:border-color .2s ease, box-shadow .2s ease}
 .menu-item:active{transform:scale(.97);border-color:var(--vx-green)!important;box-shadow:0 0 18px rgba(139,255,0,.35)}
 .menu-item .mi-ic{filter:drop-shadow(0 3px 8px rgba(0,0,0,.5))}
 
-/* Sparkle field + tap bursts (js/fx.js) */
-#fx-layer{position:fixed;inset:0;z-index:40;pointer-events:none;overflow:hidden}
-.fx-sparkle{position:absolute;top:0;will-change:transform,opacity;animation:fxfloat linear infinite;text-shadow:0 0 10px rgba(255,215,64,.65)}
-@keyframes fxfloat{
-  0%{transform:translate3d(0,105vh,0) rotate(0deg) scale(.7);opacity:0}
-  8%{opacity:.85}
-  50%{transform:translate3d(2.5vw,52vh,0) rotate(160deg) scale(1.05);opacity:.55}
-  92%{opacity:.8}
-  100%{transform:translate3d(-2vw,-6vh,0) rotate(320deg) scale(.7);opacity:0}
-}
-.fx-burst{position:fixed;z-index:90;pointer-events:none;font-size:15px;animation:fxburst .7s ease-out forwards;text-shadow:0 0 8px rgba(255,215,64,.8)}
-@keyframes fxburst{
-  from{transform:translate(0,0) scale(.6);opacity:1}
-  to{transform:translate(var(--dx),var(--dy)) scale(1.25) rotate(70deg);opacity:0}
-}
 @media (prefers-reduced-motion: reduce){
-  #fx-layer,.fx-burst{display:none!important}
-  h1.chrome,.live-badge{animation:none!important}
+  .live-badge{animation:none!important}
 }
 
 /* ============ GLITCH LAYER (2026-10-26) ============ */
